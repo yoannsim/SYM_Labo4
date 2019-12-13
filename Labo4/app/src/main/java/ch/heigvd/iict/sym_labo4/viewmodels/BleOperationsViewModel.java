@@ -160,18 +160,89 @@ public class BleOperationsViewModel extends AndroidViewModel {
             @Override
             public boolean isRequiredServiceSupported(@NonNull final BluetoothGatt gatt) {
                 mConnection = gatt; //trick to force disconnection
+                // UUID des services souhaitées
+                final String CurrentTimeService = "00001805-0000-1000-8000-00805f9b34fb";
+                final String ServiceCustomSYM = "3c0a1000-281d-4b48-b2a7-f15579a1c38f";
+                // UUID des caractéristiques souhaitées
+                final String CurrentTimeCara = "00002a2b-0000-1000-8000-00805f9b34fb";
+                final String GrapheIntCara = "3c0a1001-281d-4b48-b2a7-f15579a1c38f";
+                final String TemperatureCara = "3c0a1002-281d-4b48-b2a7-f15579a1c38f";
+                final String BTNCara = "3c0a1003-281d-4b48-b2a7-f15579a1c38f";
+
+                // Savoir le nombre de service ou caractéristique trouvée
+                int nbServiceFind = 0;
+                int nbcaracteristiqueFind = 0;
+                // Tableau des services et caractéristiques souhaitées
+                final String servicesNeed[] = {
+                        CurrentTimeService,
+                        ServiceCustomSYM
+                };
+
+                final String caracteristiquesNeed[] = {
+                        CurrentTimeCara,
+                        GrapheIntCara,
+                        TemperatureCara,
+                        BTNCara
+                };
+
                 Log.d(TAG, "isRequiredServiceSupported - discovered services:");
 
-                /* TODO
-                    - Nous devons vérifier ici que le périphérique auquel on vient de se connecter possède
-                      bien tous les services et les caractéristiques attendues, on vérifiera aussi que les
-                      caractéristiques présentent bien les opérations attendues
-                    - On en profitera aussi pour garder les références vers les différents services et
-                      caractéristiques (déclarés en lignes 33 et 34)
-                 */
+                // Pour chaque service du module Bluetooth
+                for (BluetoothGattService service : gatt.getServices() ) {
+                    String serviceUUIDstr = service.getUuid().toString();
+                    // Test si chaque service souhaité est présent
+                    for (String serviceNeed : servicesNeed) {
+                        if (serviceUUIDstr.equals(serviceNeed)) {
+                            nbServiceFind++;
+                            // Enregistre la référence au service en fonction du service
+                            switch (serviceUUIDstr) {
+                                case CurrentTimeService:
+                                    timeService = service;
+                                    break;
+                                case ServiceCustomSYM:
+                                    symService = service;
+                                    break;
+                                default:
+                            }
 
-                //FIXME si tout est OK, on retourne true, sinon la librairie appelera la méthode onDeviceNotSupported()
-                return true;
+                            // Pour chaque caractéristique du service Bluetooth
+                            for (BluetoothGattCharacteristic characteristic : service.getCharacteristics()) {
+                                String characteristicUUIDstr = characteristic.getUuid().toString();
+                                // Test si chaque caractéristique souhaitée est présente
+                                for (String caracteristique : caracteristiquesNeed) {
+                                    if (characteristicUUIDstr.equals(caracteristique)) {
+                                        nbcaracteristiqueFind++;
+                                        // Enregistre la référence à la caractéristique
+                                        switch (characteristicUUIDstr) {
+                                            case CurrentTimeCara:
+                                                currentTimeChar = characteristic;
+                                                break;
+                                            case GrapheIntCara:
+                                                integerChar = characteristic;
+                                                break;
+                                            case TemperatureCara:
+                                                temperatureChar = characteristic;
+                                                break;
+                                            case BTNCara:
+                                                buttonClickChar = characteristic;
+                                                break;
+                                            default:
+                                        }
+
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Si tout est OK, on retourne true, sinon la librairie appelera la méthode onDeviceNotSupported()
+                if (nbServiceFind == servicesNeed.length && nbcaracteristiqueFind == caracteristiquesNeed.length) {
+                    return true;
+                } else {
+                    return false;
+                }
+
             }
 
             @Override
