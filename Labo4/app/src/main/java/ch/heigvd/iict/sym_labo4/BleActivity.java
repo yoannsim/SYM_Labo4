@@ -202,6 +202,7 @@ public class BleActivity extends BaseTemplateActivity {
             //reset display
             scanResultsAdapter.clear();
 
+            // Start le scan des appareils avec les filtres donnés en paramètre
             bluetoothScanner.startScan(filters, builderScanSettings.build(), leScanCallback);
             Log.d(TAG,"Start scanning...");
             isScanning = true;
