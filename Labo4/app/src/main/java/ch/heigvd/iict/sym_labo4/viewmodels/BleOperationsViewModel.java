@@ -13,8 +13,11 @@ import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
+import java.util.Calendar;
+
 import no.nordicsemi.android.ble.BleManager;
 import no.nordicsemi.android.ble.BleManagerCallbacks;
+import no.nordicsemi.android.ble.data.Data;
 
 public class BleOperationsViewModel extends AndroidViewModel {
 
@@ -25,6 +28,7 @@ public class BleOperationsViewModel extends AndroidViewModel {
 
     //live data - observer
     private final MutableLiveData<Boolean> mIsConnected = new MutableLiveData<>();
+    private final MutableLiveData<Calendar> mDatecal = new MutableLiveData<>();
     public LiveData<Boolean> isConnected() {
         return mIsConnected;
     }
@@ -253,6 +257,16 @@ public class BleOperationsViewModel extends AndroidViewModel {
                     Dans notre cas il s'agit de s'enregistrer pour recevoir les notifications proposées par certaines
                     caractéristiques, on en profitera aussi pour mettre en place les callbacks correspondants.
                  */
+                //we enable the notifications for the two characteristics that need it
+                enableNotifications(temperatureChar).enqueue();
+                enableNotifications(currentTimeChar).enqueue();
+
+
+
+                setNotificationCallback(currentTimeChar).with((device, data) -> {
+                    mDatecal.setValue(convertDataToCalendar(data));
+                });
+
             }
 
             @Override
@@ -276,5 +290,44 @@ public class BleOperationsViewModel extends AndroidViewModel {
             */
             return false; //FIXME
         }
+
+
+
+        private byte[] getCurrentBLETime(){
+
+            Calendar now = Calendar.getInstance();
+
+            int year = now.get(Calendar.YEAR);
+
+            byte[] BLETime = new byte[10];
+            BLETime[0] = (byte) (year);
+            BLETime[1] = (byte) (year >> 8);
+
+            BLETime[2] = (byte) (now.get(Calendar.MONTH) + 1);
+            BLETime[3] = (byte) (now.get(Calendar.DAY_OF_MONTH));
+            BLETime[4] = (byte) (now.get(Calendar.HOUR_OF_DAY));
+            BLETime[5] = (byte) (now.get(Calendar.MINUTE));
+            BLETime[6] = (byte) (now.get(Calendar.SECOND));
+            BLETime[7] = (byte) (now.get(Calendar.DAY_OF_WEEK));
+
+            return BLETime;
+        }
+        private Calendar convertDataToCalendar(Data data){
+
+            Calendar cal = Calendar.getInstance();
+
+            //we parse the data , so we can put it in the calendar
+            cal.set(Calendar.YEAR, data.getIntValue(Data.FORMAT_UINT16,0));
+            cal.set(Calendar.MONTH, data.getIntValue(Data.FORMAT_UINT8,2) - 1);
+            cal.set(Calendar.DAY_OF_MONTH, data.getIntValue(Data.FORMAT_UINT8,3));
+            cal.set(Calendar.HOUR_OF_DAY, data.getIntValue(Data.FORMAT_UINT8,4));
+            cal.set(Calendar.MINUTE, data.getIntValue(Data.FORMAT_UINT8,5));
+            cal.set(Calendar.SECOND, data.getIntValue(Data.FORMAT_UINT8,6));
+            cal.set(Calendar.DAY_OF_WEEK, data.getIntValue(Data.FORMAT_UINT8,7));
+            return cal;
+        }
+
+
+
     }
 }
