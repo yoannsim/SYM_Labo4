@@ -16,6 +16,8 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
@@ -37,6 +39,11 @@ import ch.heigvd.iict.sym_labo4.viewmodels.BleOperationsViewModel;
  * (C) 2019 - HEIG-VD, IICT
  */
 
+/**
+ * @Class       : BleActivity
+ * @Author(s)   : Spinelli Isaia et Simonet Yoann
+ * @Date        : 10.01.2020
+ */
 public class BleActivity extends BaseTemplateActivity {
 
     private static final String TAG = BleActivity.class.getSimpleName();
@@ -54,9 +61,16 @@ public class BleActivity extends BaseTemplateActivity {
     private ListView scanResults = null;
     private TextView emptyScanResults = null;
 
+    /* Interface utilisateur */
     private TextView valTemp = null;
     private TextView valDate = null;
     private TextView valNbClick = null;
+
+    private EditText valIntSend = null;
+
+    private Button read_temp = null;
+    private Button send_val_int = null;
+    private Button send_val_time = null;
 
     //menu elements
     private MenuItem scanMenuBtn = null;
@@ -86,9 +100,16 @@ public class BleActivity extends BaseTemplateActivity {
         this.scanResults = findViewById(R.id.ble_scanresults);
         this.emptyScanResults = findViewById(R.id.ble_scanresults_empty);
 
+        // Lien avec l'interface utilisateur
         this.valTemp = findViewById(R.id.temp_actu);
         this.valDate = findViewById(R.id.curr_date);
         this.valNbClick = findViewById(R.id.nb_clicks);
+
+        this.valIntSend = findViewById(R.id.val_int_send);
+
+        this.read_temp = findViewById(R.id.read_temp);
+        this.send_val_int = findViewById(R.id.send_val_int);
+        this.send_val_time = findViewById(R.id.send_val_time);
 
 
         //manage scanned item
@@ -116,19 +137,34 @@ public class BleActivity extends BaseTemplateActivity {
             updateGui();
         });
 
+        /* Notifications */
         this.bleViewModel.getdate().observe(this, (calendrier) -> {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             valDate.setText(sdf.format(calendrier.getTime()));
         });
 
-        this.bleViewModel.getTemperature().observe(this, (temper) -> {
-            Log.d(TAG, "READ TEMP !");
-            valTemp.setText(temper.toString());
-        });
-
         this.bleViewModel.getBoutonNbClick().observe(this, (nbClick) -> {
             valNbClick.setText(nbClick.toString());
         });
+        /* Boutons pour la lecture de la température*/
+        this.read_temp.setOnClickListener(v -> {
+            this.bleViewModel.readTemperature();
+            this.bleViewModel.getTemperature().observe(this, (temp) -> {
+                valTemp.setText(temp.toString());
+            });
+        });
+
+        /* Boutons pour l'envoie d un entier */
+        this.send_val_int.setOnClickListener(v -> {
+            String valstr = valIntSend.getText().toString();
+            this.bleViewModel.sendValInt(Integer.parseInt(valstr));
+        });
+
+        /* Boutons pour l'envoie de l'heure */
+        this.send_val_time.setOnClickListener(v -> {
+            this.bleViewModel.sendCurrentTime();
+        });
+
     }
 
     @Override
@@ -207,8 +243,6 @@ public class BleActivity extends BaseTemplateActivity {
 
             //we scan for any BLE device
             //we don't filter them based on advertised services...
-            //TODO ajouter un filtre pour n'afficher que les devices proposant
-            // le service "SYM" (UUID: "3c0a1000-281d-4b48-b2a7-f15579a1c38f")
 
             // Liste des filtres à ajouter lors du scan
             ArrayList<ScanFilter> filters = new ArrayList<>();

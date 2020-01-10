@@ -21,6 +21,11 @@ import no.nordicsemi.android.ble.BleManager;
 import no.nordicsemi.android.ble.BleManagerCallbacks;
 import no.nordicsemi.android.ble.data.Data;
 
+/**
+ * @Class       : BleOperationsViewModel
+ * @Author(s)   : Spinelli Isaia et Simonet Yoann
+ * @Date        : 10.01.2020
+ */
 public class BleOperationsViewModel extends AndroidViewModel {
 
 
@@ -81,13 +86,19 @@ public class BleOperationsViewModel extends AndroidViewModel {
             mConnection.disconnect();
         }
     }
-    /* TODO
-        vous pouvez placer ici les différentes méthodes permettant à l'utilisateur
-        d'interagir avec le périphérique depuis l'activité
-     */
     public boolean readTemperature() {
         if(!isConnected().getValue() || temperatureChar == null) return false;
         return ble.readTemperature();
+    }
+
+    public boolean sendValInt(int val) {
+        if(!isConnected().getValue() || integerChar == null) return false;
+        return ble.sendValInt(val);
+    }
+
+    public boolean sendCurrentTime() {
+        if(!isConnected().getValue() || currentTimeChar == null) return false;
+        return ble.sendCurrentTime();
     }
 
     private BleManagerCallbacks bleManagerCallbacks = new BleManagerCallbacks() {
@@ -295,7 +306,6 @@ public class BleOperationsViewModel extends AndroidViewModel {
 
         /* Permet de lire la température sur le device */
         public boolean readTemperature() {
-
             readCharacteristic(temperatureChar).with((device, data) -> {
                 temperatureCelsius.setValue(data.getIntValue(Data.FORMAT_UINT16, 0) / 10f);
             }).enqueue();
@@ -304,7 +314,7 @@ public class BleOperationsViewModel extends AndroidViewModel {
         }
 
         /* Permet d'envoyer au device un valeur en int */
-        public boolean writeValInt(int value){
+        public boolean sendValInt(int value){
             // Convertie la valeur à envoyer en tableau de 4 bytes
             byte[] tabVal = new byte[]{
                     (byte)value,
@@ -315,12 +325,11 @@ public class BleOperationsViewModel extends AndroidViewModel {
 
             // On envoie la valeur souhaitée
             writeCharacteristic(integerChar, tabVal).enqueue();
-
             return false;
         }
 
         /* Permet d'envoyer le temps courant */
-        public boolean writeCurrentTime(){
+        public boolean sendCurrentTime(){
             // On récupère et envoie le temps courant au device
             writeCharacteristic(currentTimeChar, CurrentTime()).enqueue();
             return false;

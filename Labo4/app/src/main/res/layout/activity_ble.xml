@@ -19,6 +19,7 @@
 
             <!-- TODO vous placerez dans ce layout toutes les vues nécessaire aux intéractions avec le périphérique BLE -->
 
+            <!-- Lecture de la temoérature -->
             <TextView
                 android:id="@+id/temperature"
                 android:layout_width="match_parent"
@@ -32,11 +33,12 @@
                 android:text="null" />
 
             <Button
-                android:id="@+id/send_temp"
+                android:id="@+id/read_temp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/ble_temperature_read" />
 
+            <!-- Notification du nombre de clique -->
             <TextView
                 android:id="@+id/nb_clicks_title"
                 android:layout_width="match_parent"
@@ -49,6 +51,23 @@
                 android:layout_height="wrap_content"
                 android:text="0" />
 
+            <!-- Ecriture de l'entier -->
+            <EditText
+                android:id="@+id/val_int_send"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="1"
+                android:inputType="number"></EditText>
+
+            <Button
+                android:id="@+id/send_val_int"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ble_sendvalue_send" />
+
+
+
+            <!-- Notification de la date -->
             <TextView
                 android:id="@+id/date"
                 android:layout_width="match_parent"
@@ -59,6 +78,13 @@
                 android:id="@+id/curr_date"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
+
+            <!-- Ecriture de l'heure -->
+            <Button
+                android:id="@+id/send_val_time"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ble_currenttime_set" />
 
         </LinearLayout>
 
