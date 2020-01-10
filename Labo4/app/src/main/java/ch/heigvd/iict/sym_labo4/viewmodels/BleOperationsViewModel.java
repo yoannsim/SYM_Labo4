@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.util.Log;
 import android.util.LogPrinter;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -22,6 +23,7 @@ import no.nordicsemi.android.ble.data.Data;
 
 public class BleOperationsViewModel extends AndroidViewModel {
 
+
     private static final String TAG = BleOperationsViewModel.class.getSimpleName();
 
     private MySymBleManager ble = null;
@@ -29,13 +31,18 @@ public class BleOperationsViewModel extends AndroidViewModel {
 
     //live data - observer
     private final MutableLiveData<Boolean> mIsConnected = new MutableLiveData<>();
-    private final MutableLiveData<Calendar> mDatecal = new MutableLiveData<>();
     public LiveData<Boolean> isConnected() {
         return mIsConnected;
     }
 
+    private final MutableLiveData<Calendar> Calendrier = new MutableLiveData<>();
+    public LiveData<Calendar> getdate() { return Calendrier; }
+
     private final MutableLiveData<Float> temperatureCelsius = new MutableLiveData<>();
     public LiveData<Float> getTemperature() { return temperatureCelsius; }
+
+    private final MutableLiveData<Integer> boutonNbClick = new MutableLiveData<>();
+    public LiveData<Integer> getBoutonNbClick() { return boutonNbClick; }
 
     //references to the Services and Characteristics of the SYM Pixl
     private BluetoothGattService timeService = null, symService = null;
@@ -46,6 +53,8 @@ public class BleOperationsViewModel extends AndroidViewModel {
         this.mIsConnected.setValue(false); //to be sure that it's never null
         this.ble = new MySymBleManager();
         this.ble.setGattCallbacks(this.bleManagerCallbacks);
+        getTemperature();
+        //this.updateGui();
     }
 
     @Override
@@ -255,20 +264,18 @@ public class BleOperationsViewModel extends AndroidViewModel {
 
             @Override
             protected void initialize() {
-                /* TODO
-                    Ici nous somme sûr que le périphérique possède bien tous les services et caractéristiques
-                    attendus et que nous y sommes connectés. Nous pouvous effectuer les premiers échanges BLE:
-                    Dans notre cas il s'agit de s'enregistrer pour recevoir les notifications proposées par certaines
-                    caractéristiques, on en profitera aussi pour mettre en place les callbacks correspondants.
-                 */
-                //we enable the notifications for the two characteristics that need it
-                enableNotifications(temperatureChar).enqueue();
+                // On s'enregistre pour recevoir les notifications du temps et du nb de click
                 enableNotifications(currentTimeChar).enqueue();
+                enableNotifications(buttonClickChar).enqueue();
 
 
-
+                /* Reception des notifications du temps */
                 setNotificationCallback(currentTimeChar).with((device, data) -> {
-                    mDatecal.setValue(convertDataToCalendar(data));
+                    Calendrier.setValue(convertDataToCalendar(data));
+                });
+                /* Reception des notif du nombre de bouton cliqués */
+                setNotificationCallback(buttonClickChar).with((device, data) -> {
+                    boutonNbClick.setValue(data.getIntValue(Data.FORMAT_UINT8,0));
                 });
 
             }
@@ -286,58 +293,79 @@ public class BleOperationsViewModel extends AndroidViewModel {
             }
         };
 
+        /* Permet de lire la température sur le device */
         public boolean readTemperature() {
-            /* TODO on peut effectuer ici la lecture de la caractéristique température
-                la valeur récupérée sera envoyée à l'activité en utilisant le mécanisme
-                des MutableLiveData
-                On placera des méthodes similaires pour les autres opérations...
-            */
 
-            int Temperature = temperatureChar.getIntValue(Data.FORMAT_UINT16, 0);
-            float TempCelsius = (Temperature / 10f);
-
-            temperatureCelsius.setValue(TempCelsius);
+            readCharacteristic(temperatureChar).with((device, data) -> {
+                temperatureCelsius.setValue(data.getIntValue(Data.FORMAT_UINT16, 0) / 10f);
+            }).enqueue();
 
             return false; //FIXME
         }
 
+        /* Permet d'envoyer au device un valeur en int */
+        public boolean writeValInt(int value){
+            // Convertie la valeur à envoyer en tableau de 4 bytes
+            byte[] tabVal = new byte[]{
+                    (byte)value,
+                    (byte)(value >> 8),
+                    (byte)(value >> 16),
+                    (byte)(value >> 24)
+            };
 
+            // On envoie la valeur souhaitée
+            writeCharacteristic(integerChar, tabVal).enqueue();
 
-        private byte[] getCurrentBLETime(){
+            return false;
+        }
 
-            Calendar now = Calendar.getInstance();
+        /* Permet d'envoyer le temps courant */
+        public boolean writeCurrentTime(){
+            // On récupère et envoie le temps courant au device
+            writeCharacteristic(currentTimeChar, CurrentTime()).enqueue();
+            return false;
+        }
 
-            int year = now.get(Calendar.YEAR);
+        /* Permet de convertir la data recu par le device en calendrier type connu*/
+        private Calendar convertDataToCalendar(Data data){
 
-            byte[] BLETime = new byte[10];
-            BLETime[0] = (byte) (year);
-            BLETime[1] = (byte) (year >> 8);
+            Calendar calendrier = Calendar.getInstance();
 
-            BLETime[2] = (byte) (now.get(Calendar.MONTH) + 1);
-            BLETime[3] = (byte) (now.get(Calendar.DAY_OF_MONTH));
-            BLETime[4] = (byte) (now.get(Calendar.HOUR_OF_DAY));
-            BLETime[5] = (byte) (now.get(Calendar.MINUTE));
-            BLETime[6] = (byte) (now.get(Calendar.SECOND));
-            BLETime[7] = (byte) (now.get(Calendar.DAY_OF_WEEK));
+            // On parse la data recu pour récupérer toutes les informations utiles
+            calendrier.set(Calendar.YEAR, data.getIntValue(Data.FORMAT_UINT16,0));
+            calendrier.set(Calendar.MONTH, data.getIntValue(Data.FORMAT_UINT8,2) - 1);
+            calendrier.set(Calendar.DAY_OF_MONTH, data.getIntValue(Data.FORMAT_UINT8,3));
+            calendrier.set(Calendar.HOUR_OF_DAY, data.getIntValue(Data.FORMAT_UINT8,4));
+            calendrier.set(Calendar.MINUTE, data.getIntValue(Data.FORMAT_UINT8,5));
+            calendrier.set(Calendar.SECOND, data.getIntValue(Data.FORMAT_UINT8,6));
+            calendrier.set(Calendar.DAY_OF_WEEK, data.getIntValue(Data.FORMAT_UINT8,7));
+            return calendrier;
+        }
+
+        /* Permet d'avoir le temps courant en format de tableau de byte afin de l'envoyer au device */
+        private byte[] CurrentTime(){
+
+            Calendar calendrierCurr = Calendar.getInstance();
+
+            int year = calendrierCurr.get(Calendar.YEAR);
+
+            byte[] BLETime = new byte[] {
+                (byte) year ,
+                (byte) (year >> 8),
+                (byte) (calendrierCurr.get(Calendar.MONTH) + 1),
+                (byte) (calendrierCurr.get(Calendar.DAY_OF_MONTH)),
+                (byte) (calendrierCurr.get(Calendar.HOUR_OF_DAY)),
+                (byte) (calendrierCurr.get(Calendar.MINUTE)),
+                (byte) (calendrierCurr.get(Calendar.SECOND)),
+                (byte) (calendrierCurr.get(Calendar.DAY_OF_WEEK)),
+                /* Fraction 256 pas géré */
+                (byte) (0),
+                /* Adjust Reason pas géré */
+                (byte) (0)
+            };
 
             return BLETime;
         }
-        private Calendar convertDataToCalendar(Data data){
-
-            Calendar cal = Calendar.getInstance();
-
-            //we parse the data , so we can put it in the calendar
-            cal.set(Calendar.YEAR, data.getIntValue(Data.FORMAT_UINT16,0));
-            cal.set(Calendar.MONTH, data.getIntValue(Data.FORMAT_UINT8,2) - 1);
-            cal.set(Calendar.DAY_OF_MONTH, data.getIntValue(Data.FORMAT_UINT8,3));
-            cal.set(Calendar.HOUR_OF_DAY, data.getIntValue(Data.FORMAT_UINT8,4));
-            cal.set(Calendar.MINUTE, data.getIntValue(Data.FORMAT_UINT8,5));
-            cal.set(Calendar.SECOND, data.getIntValue(Data.FORMAT_UINT8,6));
-            cal.set(Calendar.DAY_OF_WEEK, data.getIntValue(Data.FORMAT_UINT8,7));
-            return cal;
-        }
-
-
 
     }
 }

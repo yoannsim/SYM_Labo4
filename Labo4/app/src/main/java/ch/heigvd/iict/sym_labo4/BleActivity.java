@@ -23,6 +23,7 @@ import android.widget.TextView;
 
 import androidx.lifecycle.ViewModelProviders;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.UUID;
 
@@ -53,6 +54,10 @@ public class BleActivity extends BaseTemplateActivity {
     private ListView scanResults = null;
     private TextView emptyScanResults = null;
 
+    private TextView valTemp = null;
+    private TextView valDate = null;
+    private TextView valNbClick = null;
+
     //menu elements
     private MenuItem scanMenuBtn = null;
     private MenuItem disconnectMenuBtn = null;
@@ -81,6 +86,11 @@ public class BleActivity extends BaseTemplateActivity {
         this.scanResults = findViewById(R.id.ble_scanresults);
         this.emptyScanResults = findViewById(R.id.ble_scanresults_empty);
 
+        this.valTemp = findViewById(R.id.temp_actu);
+        this.valDate = findViewById(R.id.curr_date);
+        this.valNbClick = findViewById(R.id.nb_clicks);
+
+
         //manage scanned item
         this.scanResultsAdapter = new ResultsAdapter(this);
         this.scanResults.setAdapter(this.scanResultsAdapter);
@@ -104,6 +114,20 @@ public class BleActivity extends BaseTemplateActivity {
         //ble events
         this.bleViewModel.isConnected().observe(this, (isConnected) -> {
             updateGui();
+        });
+
+        this.bleViewModel.getdate().observe(this, (calendrier) -> {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            valDate.setText(sdf.format(calendrier.getTime()));
+        });
+
+        this.bleViewModel.getTemperature().observe(this, (temper) -> {
+            Log.d(TAG, "READ TEMP !");
+            valTemp.setText(temper.toString());
+        });
+
+        this.bleViewModel.getBoutonNbClick().observe(this, (nbClick) -> {
+            valNbClick.setText(nbClick.toString());
         });
     }
 
@@ -151,6 +175,7 @@ public class BleActivity extends BaseTemplateActivity {
      */
     private void updateGui() {
         Boolean isConnected = this.bleViewModel.isConnected().getValue();
+
         if(isConnected != null && isConnected) {
             this.scanPanel.setVisibility(View.GONE);
             this.operationPanel.setVisibility(View.VISIBLE);
