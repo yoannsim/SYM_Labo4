@@ -19,6 +19,24 @@
 
             <!-- TODO vous placerez dans ce layout toutes les vues nécessaire aux intéractions avec le périphérique BLE -->
 
+            <TextView
+                android:id="@+id/temperature"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ble_temperature_title" />
+
+            <TextView
+                android:id="@+id/temp_actu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="null" />
+
+            <Button
+                android:id="@+id/send_temp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/ble_temperature_read" />
+
         </LinearLayout>
 
     </ScrollView>
