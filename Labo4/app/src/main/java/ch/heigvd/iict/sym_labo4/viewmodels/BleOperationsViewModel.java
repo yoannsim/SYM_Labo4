@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.util.Log;
+import android.util.LogPrinter;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -32,6 +33,9 @@ public class BleOperationsViewModel extends AndroidViewModel {
     public LiveData<Boolean> isConnected() {
         return mIsConnected;
     }
+
+    private final MutableLiveData<Float> temperatureCelsius = new MutableLiveData<>();
+    public LiveData<Float> getTemperature() { return temperatureCelsius; }
 
     //references to the Services and Characteristics of the SYM Pixl
     private BluetoothGattService timeService = null, symService = null;
@@ -288,6 +292,12 @@ public class BleOperationsViewModel extends AndroidViewModel {
                 des MutableLiveData
                 On placera des méthodes similaires pour les autres opérations...
             */
+
+            int Temperature = temperatureChar.getIntValue(Data.FORMAT_UINT16, 0);
+            float TempCelsius = (Temperature / 10f);
+
+            temperatureCelsius.setValue(TempCelsius);
+
             return false; //FIXME
         }
 
